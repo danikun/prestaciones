@@ -1,0 +1,78 @@
+@page "/reclamaciones/nueva"
+@rendermode InteractiveServer
+@using Prestaciones.Web.Models
+@using Prestaciones.Web.Services
+@inject ReclamacionPreviaService ReclamacionService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nueva Reclamación Previa</PageTitle>
+
+<div class="container">
+    <h1>Nueva Reclamación Previa</h1>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <InputFile OnChange="@SubirArchivo" class="form-control mb-3" accept=".pdf,.doc,.docx" />
+                    @if (!string.IsNullOrEmpty(mensajeError))
+                    {
+                        <div class="alert alert-danger">@mensajeError</div>
+                    }
+                    @if (cargando)
+                    {
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border text-primary me-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <span>Subiendo archivo...</span>
+                        </div>
+                    }
+                    <div class="mt-3">
+                        <a href="/reclamaciones" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool cargando;
+    private string? mensajeError;
+
+    private async Task SubirArchivo(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            mensajeError = null;
+            cargando = true;
+
+            var archivo = e.File;
+            if (archivo.Size > 10 * 1024 * 1024) // 10MB
+            {
+                mensajeError = "El archivo no puede ser mayor a 10MB";
+                return;
+            }
+
+            var extensionesPermitidas = new[] { ".pdf", ".doc", ".docx" };
+            var extension = Path.GetExtension(archivo.Name).ToLowerInvariant();
+            if (!extensionesPermitidas.Contains(extension))
+            {
+                mensajeError = "Solo se permiten archivos PDF y Word";
+                return;
+            }
+
+            await ReclamacionService.CreateReclamacion(archivo);
+            NavigationManager.NavigateTo("/reclamaciones");
+        }
+        catch (Exception ex)
+        {
+            mensajeError = "Error al subir el archivo: " + ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+} 

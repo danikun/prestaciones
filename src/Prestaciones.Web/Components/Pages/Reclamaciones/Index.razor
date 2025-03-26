@@ -1,0 +1,108 @@
+@page "/"
+@page "/reclamaciones"
+@rendermode InteractiveServer
+@using Prestaciones.Web.Models
+@using Prestaciones.Web.Services
+@inject ReclamacionPreviaService ReclamacionService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Gestión de Reclamaciones</PageTitle>
+
+<div class="container">
+    <h1>Gestión de Reclamaciones</h1>
+
+    <div class="mb-3">
+        <a href="/reclamaciones/nueva" class="btn btn-primary">Nueva Reclamación</a>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Filtrar por estado:</label>
+        <select class="form-select" @bind="estadoFiltro" @bind:after="FiltrarReclamaciones">
+            <option value="">Todos</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Aceptada">Aceptada</option>
+            <option value="AceptadaParcialmente">Aceptada Parcialmente</option>
+            <option value="Desestimada">Desestimada</option>
+        </select>
+    </div>
+
+    @if (reclamaciones == null)
+    {
+        <p>Cargando...</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Fecha Entrada</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var reclamacion in reclamaciones)
+                    {
+                        <tr>
+                            <td>@reclamacion.FechaEntrada.ToLocalTime().ToString("g")</td>
+                            <td>@reclamacion.Estado</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="/reclamaciones/@reclamacion.Id" class="btn btn-info btn-sm">
+                                        <i class="bi bi-eye"></i> Ver Detalle
+                                    </a>
+                                    <button @onclick="() => DescargarDocumento(reclamacion.Id)" class="btn btn-secondary btn-sm">
+                                        <i class="bi bi-download"></i> Descargar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private IEnumerable<ReclamacionPrevia>? reclamaciones;
+    private string? estadoFiltro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarReclamaciones();
+    }
+
+    private async Task CargarReclamaciones()
+    {
+        reclamaciones = await ReclamacionService.GetReclamaciones(estadoFiltro);
+    }
+
+    private async Task FiltrarReclamaciones()
+    {
+        await CargarReclamaciones();
+    }
+
+    private async Task DescargarDocumento(Guid id)
+    {
+        try
+        {
+            var stream = await ReclamacionService.DescargarDocumento(id);
+            var reclamacion = reclamaciones?.FirstOrDefault(r => r.Id == id);
+            if (reclamacion == null) return;
+
+            var nombreArchivo = reclamacion.RutaDocumento.Split('/').Last();
+            var bytes = new byte[stream.Length];
+            await stream.ReadAsync(bytes);
+            
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", nombreArchivo, Convert.ToBase64String(bytes));
+        }
+        catch (Exception ex)
+        {
+            // Aquí podrías mostrar un mensaje de error al usuario
+            Console.WriteLine($"Error al descargar el documento: {ex.Message}");
+        }
+    }
+} 
