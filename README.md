@@ -1,4 +1,4 @@
-# Como compilar y ejecutar
+# Cómo compilar y ejecutar
 - Instalar el SDK de .Net 9 siguiendo las instrucciones de [este](https://dotnet.microsoft.com/es-es/) enlace.
 - Instalar Docker Desktop desde [este](https://www.docker.com/products/docker-desktop/) enlace.
 - Arrancar Docker Desktop.
